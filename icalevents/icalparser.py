@@ -69,6 +69,7 @@ class Event:
         self.floating = None
         self.status = None
         self.url = None
+        self.rrules = None
 
     def time_left(self, time=None):
         """
@@ -204,6 +205,7 @@ def create_event(component, strict):
     event.all_day = type(component.get("dtstart").dt) is date
     if component.get("rrule"):
         event.recurring = True
+        event.rrules = component.get("rrule")
     event.location = encode(component.get("location"))
 
     if component.get("attendee"):
@@ -277,6 +279,7 @@ def parse_events(
     tzinfo=None,
     sort=False,
     strict=False,
+    include_recurrence_master=False,
 ):
     """
     Query the events occurring in a given time range.
@@ -427,6 +430,8 @@ def parse_events(
                                 dt.date() if type(e.start) is date else dt, e.uid
                             )
                         found.append(ecopy)
+                if include_recurrence_master:
+                    found.append(e)
 
             elif e.end >= f and e.start <= t and is_not_exception(e.start):
                 found.append(e)
