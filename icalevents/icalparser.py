@@ -2,21 +2,25 @@
 Parse iCal data to Events.
 """
 
-# for UID generation
-from faulthandler import is_enabled
+from datetime import datetime, timedelta, date
+from importlib.metadata import version
 from random import randint
-from datetime import datetime, timedelta, date, tzinfo
 from typing import Optional
+from uuid import uuid4
 
 from dateutil.rrule import rrulestr
 from dateutil.tz import UTC, gettz
-
 from icalendar import Calendar
 from icalendar.prop import vDDDLists, vText
-from uuid import uuid4
-
-from icalendar.windows_to_olson import WINDOWS_TO_OLSON
 from pytz import timezone
+
+if version("icalendar") >= "6.0":
+    from icalendar import use_pytz
+    from icalendar.timezone.windows_to_olson import WINDOWS_TO_OLSON
+
+    use_pytz()
+else:
+    from icalendar.windows_to_olson import WINDOWS_TO_OLSON
 
 
 def now():
@@ -217,9 +221,9 @@ def create_event(component, strict):
     else:
         event.attendee = str(None)
 
-    if component.get("uid"):
+    try:
         event.uid = component.get("uid").encode("utf-8").decode("ascii")
-    else:
+    except (AttributeError, UnicodeDecodeError):
         event.uid = str(uuid4())  # Be nice - treat every event as unique
 
     if component.get("organizer"):
@@ -252,7 +256,7 @@ def create_event(component, strict):
         event.last_modified = event.created
 
     # sequence can be 0 - test for None instead
-    if not component.get("sequence") is None:
+    if component.get("sequence") is not None:
         event.sequence = component.get("sequence")
 
     if component.get("categories"):
@@ -363,7 +367,7 @@ def parse_events(
             e = create_event(component, strict)
 
             # make rule.between happy and provide from, to points in time that have the same format as dtstart
-            if type(e.start) is date and e.recurring == False:
+            if type(e.start) is date and not e.recurring:
                 f, t = date(start.year, start.month, start.day), date(
                     end.year, end.month, end.day
                 )
