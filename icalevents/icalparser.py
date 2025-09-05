@@ -440,6 +440,13 @@ def parse_events(
 
     # Remove events that are replaced in ical
     for event in found:
+        if event.rrules:
+            # Master events should not be removed. Sometimes,
+            # calendars create both master and the first occurence.
+            # Depending on the order, if the destination master appears
+            # first, it would've been removed.
+            continue
+
         if not event.recurrence_id and (
             event.uid,
             event.start,
